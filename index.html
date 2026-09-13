@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cyber 3D Highway Racer - Junction & Traffic Lights Edition</title>
+    <title>Cyber 3D Highway Racer - Highway Signals</title>
     <style>
         * {
             box-sizing: border-box;
@@ -418,7 +418,7 @@
     <div id="signal-alert" class="hidden" aria-live="polite">
         <div id="signal-alert-title">TRAFFIC SIGNAL AHEAD</div>
         <div id="signal-alert-state">GREEN - PROCEED</div>
-        <div id="signal-alert-distance">JUNCTION IN 100 M</div>
+        <div id="signal-alert-distance">SIGNAL IN 100 M</div>
     </div>
  
     <!-- On-Screen Touch Controls for Android & Touch Devices -->
@@ -439,11 +439,11 @@
         <div class="modal-content" id="mainMenuModal">
             <div class="title-container">
                 <h1 id="screenTitle">CYBER RACER 3D</h1>
-                <div class="sub-title">Junction & Traffic Lights Edition</div>
+                <div class="sub-title">Highway Signals Edition</div>
             </div>
             <div id="audio-prompt">🎵 Click Anywhere to Enable Audio 🎵</div>
             <p id="screenText">
-                Highway racing featuring cross-road junctions, synchronized traffic lights (Red, Yellow, Green), cross-traffic, grass sideways, and immersive controls.
+                Highway racing with standalone traffic signals, traffic, bridges, trees, weather, and immersive controls.
             </p>
             <div class="btn-group">
                 <button class="action-btn" id="startBtn">START ENGINE</button>
@@ -815,6 +815,7 @@
         let crossTrafficCars = [];
         let roadSegments = [];
         let junctions = [];
+        let signalSections = [];
         let streetLights = [];
         let roadBridges = [];
         let roadTrees = [];
@@ -1809,14 +1810,30 @@
         function createRoadNetwork() {
             for (let i = 0; i < totalSegments; i++) {
                 const zPos = -i * segmentLength;
-                let seg;
+                const seg = createRegularSegment(zPos);
                 if (i > 0 && i % 2 === 0) {
-                    seg = createJunctionSegment(zPos);
-                    junctions.push(seg);
-                } else {
-                    seg = createRegularSegment(zPos);
+                    addStandaloneTrafficSignals(seg);
+                    signalSections.push(seg);
                 }
                 roadSegments.push(seg);
+            }
+        }
+
+        function addStandaloneTrafficSignals(segmentGroup) {
+            segmentGroup.userData.isSignalSection = true;
+            segmentGroup.userData.crossingHalfDepth = 5 * 0.65 + 0.42 / 2;
+            segmentGroup.userData.npcStopBeforeCrossing = 2;
+            createJunctionSignal(segmentGroup, -roadWidth / 2 - 2, 0, 0, 'main');
+            createJunctionSignal(segmentGroup, roadWidth / 2 + 2, 0, Math.PI, 'main');
+
+            const zebraMaterial = new THREE.MeshBasicMaterial({ color: 0xf2f4f5 });
+            for (let index = -5; index <= 5; index++) {
+                const stripe = new THREE.Mesh(
+                    new THREE.BoxGeometry(roadWidth, 0.04, 0.42),
+                    zebraMaterial
+                );
+                stripe.position.set(0, 0.1, index * 0.65);
+                segmentGroup.add(stripe);
             }
         }
 
@@ -2154,45 +2171,25 @@
             }
  
             if (trafficLightState === 'RED') {
-                junctions.forEach(junction => {
-                    const junctionVisible = junction.position.z > -260 && junction.position.z < 20;
-                    const hasCrossTraffic = crossTrafficCars.some(car => car.userData.junction === junction);
-                    const hasCrossingPeople = junctionPedestrians.some(person => person.userData.junction === junction);
-                    const pedestrianCycleUntil = junction.userData.pedestrianCycleUntil || 0;
-                    if (!junctionVisible) return;
- 
-                    if (!hasCrossTraffic) {
-                        [-3.2, 3.2].forEach((laneOffset, index) => {
-                            const crossCar = createRealisticCar(index % 2 === 0 ? 0x00ff88 : 0xffaa00, false);
-                            crossCar.rotation.y = -Math.PI / 2;
-                            crossCar.userData = {
-                                isCrossTraffic: true,
-                                junction,
-                                crossing: false,
-                                hasEnteredJunction: false
-                            };
-                            crossCar.position.set(-46, 0, junction.position.z + laneOffset);
-                            crossCar.userData.stopLineX = -vehicleStopCenterOffset;
-                            scene.add(crossCar);
-                            crossTrafficCars.push(crossCar);
-                        });
-                    }
- 
-                    const playerFarEnoughForCrossing = !playerCar
-                        || Math.abs(playerCar.position.z - junction.position.z) > 36;
-                    if (!hasCrossingPeople && playerFarEnoughForCrossing && gameTime >= pedestrianCycleUntil) {
+                signalSections.forEach(signalSection => {
+                    const signalVisible = signalSection.position.z > -260 && signalSection.position.z < 20;
+                    const hasCrossingPeople = junctionPedestrians.some(person => person.userData.signalSection === signalSection);
+                    const pedestrianCycleUntil = signalSection.userData.pedestrianCycleUntil || 0;
+                    if (!signalVisible) return;
+
+                    if (!hasCrossingPeople && gameTime >= pedestrianCycleUntil) {
                         for (let index = 0; index < 3; index++) {
-                            const forwardPerson = createPedestrian(-7.2 - index * 0.55, junction.position.z + 11.5 + index * 0.7, 1, true);
+                            const forwardPerson = createPedestrian(-10 - index * 0.55, signalSection.position.z + index * 0.7, 1, true);
                             forwardPerson.userData.isJunctionCrossing = true;
-                            forwardPerson.userData.junction = junction;
+                            forwardPerson.userData.signalSection = signalSection;
                             junctionPedestrians.push(forwardPerson);
  
-                            const returnPerson = createPedestrian(7.2 + index * 0.55, junction.position.z + 11.5 - index * 0.7, -1, true);
+                            const returnPerson = createPedestrian(10 + index * 0.55, signalSection.position.z - index * 0.7, -1, true);
                             returnPerson.userData.isJunctionCrossing = true;
-                            returnPerson.userData.junction = junction;
+                            returnPerson.userData.signalSection = signalSection;
                             junctionPedestrians.push(returnPerson);
                         }
-                        junction.userData.pedestrianCycleUntil = gameTime + 8;
+                        signalSection.userData.pedestrianCycleUntil = gameTime + 8;
                     }
                 });
             }
@@ -2401,6 +2398,8 @@
  
         function triggerSmartHornAI() {
             playHornSound();
+
+            if (trafficLightState === 'RED') return;
  
             const isNearJunction = junctions.some(junction =>
                 Math.abs(playerCar.position.z - junction.position.z) <= 20
@@ -2471,7 +2470,7 @@
             junctionPedestrians.forEach(person => scene.remove(person));
             junctionPedestrians = [];
             pedestrians = pedestrians.filter(person => !person.userData.isJunctionCrossing);
-            junctions.forEach(junction => delete junction.userData.pedestrianCycleUntil);
+            signalSections.forEach(signalSection => delete signalSection.userData.pedestrianCycleUntil);
  
             smokeParticles.forEach(sp => scene.remove(sp.mesh));
             smokeParticles = [];
@@ -2535,7 +2534,7 @@
             startLobbyMusic();
  
             screenTitle.innerText = "CYBER RACER 3D";
-            screenText.innerHTML = "Highway racing featuring cross-road junctions, synchronized traffic lights (Red, Yellow, Green), cross-traffic, grass sideways, and immersive controls.";
+            screenText.innerHTML = "Highway racing with standalone traffic signals, traffic, bridges, trees, weather, and immersive controls.";
             startBtn.innerText = "START ENGINE";
             settingsModal.classList.add('hidden');
             mainMenuModal.classList.remove('hidden');
@@ -2586,17 +2585,17 @@
                 return;
             }
  
-            const nextJunction = junctions
-                .filter(junction => junction.position.z < playerCar.position.z - 5 && junction.position.z > playerCar.position.z - 125)
+            const nextSignal = signalSections
+                .filter(signalSection => signalSection.position.z < playerCar.position.z - 5 && signalSection.position.z > playerCar.position.z - 125)
                 .sort((a, b) => b.position.z - a.position.z)[0];
  
-            if (!nextJunction) {
+            if (!nextSignal) {
                 signalAlert.classList.add('hidden');
                 lastAlertJunction = null;
                 return;
             }
  
-            const distance = Math.round(playerCar.position.z - nextJunction.position.z);
+            const distance = Math.round(playerCar.position.z - nextSignal.position.z);
             const stateText = trafficLightState === 'RED'
                 ? 'RED - STOP'
                 : trafficLightState === 'YELLOW'
@@ -2606,11 +2605,11 @@
             signalAlert.classList.remove('hidden', 'signal-red', 'signal-yellow', 'signal-green');
             signalAlert.classList.add(`signal-${trafficLightState.toLowerCase()}`);
             signalAlertState.innerText = stateText;
-            signalAlertDistance.innerText = `JUNCTION IN ${Math.max(1, distance)} M`;
+            signalAlertDistance.innerText = `SIGNAL IN ${Math.max(1, distance)} M`;
  
-            if (lastAlertJunction !== nextJunction || lastAlertState !== trafficLightState) {
+            if (lastAlertJunction !== nextSignal || lastAlertState !== trafficLightState) {
                 playSignalAlert(trafficLightState);
-                lastAlertJunction = nextJunction;
+                lastAlertJunction = nextSignal;
                 lastAlertState = trafficLightState;
             }
         }
@@ -2635,7 +2634,7 @@
                 trafficLightTimer = 0;
             }
  
-            junctions.forEach(junc => {
+            roadSegments.forEach(junc => {
                 junc.children.forEach(child => {
                     if (child.userData.signalLights) {
                         const displayedState = child.userData.signalAxis === 'cross'
@@ -2849,18 +2848,20 @@
                 let stopJunction = null;
                 let closestJunctionDistance = Infinity;
                 if (trafficLightState !== 'GREEN') {
-                    junctions.forEach(junc => {
-                        const distToJunction = car.position.z - junc.position.z;
-                        if (distToJunction > 0 && distToJunction < 35 && distToJunction < closestJunctionDistance) {
+                    signalSections.forEach(signalSection => {
+                        const distToSignal = signalSection.position.z - car.position.z;
+                        if (distToSignal > 0 && distToSignal < 35 && distToSignal < closestJunctionDistance) {
                             shouldStop = true;
-                            stopJunction = junc;
-                            closestJunctionDistance = distToJunction;
+                            stopJunction = signalSection;
+                            closestJunctionDistance = distToSignal;
                         }
                     });
                 }
  
                 const extraForwardMovement = trafficFrozenForSafety ? 0 : (car.userData.speedBoost || 0) * delta;
-                const stopDistance = vehicleStopCenterOffset;
+                const stopDistance = stopJunction && stopJunction.userData.isSignalSection
+                    ? stopJunction.userData.crossingHalfDepth + stopJunction.userData.npcStopBeforeCrossing
+                    : vehicleStopCenterOffset;
                 const carSpeedMult = shouldStop && closestJunctionDistance <= stopDistance
                     ? 0.0
                     : (car.userData.cruiseSpeed * delta * 90);
@@ -2869,8 +2870,10 @@
                 }
  
                 if (shouldStop && stopJunction) {
-                    const stopLinePosition = stopJunction.position.z + stopDistance;
-                    car.position.z = Math.min(car.position.z, stopLinePosition);
+                    const stopLinePosition = stopJunction.position.z - stopDistance;
+                    car.position.z = stopJunction.userData.isSignalSection
+                        ? Math.min(car.position.z, stopLinePosition)
+                        : Math.max(car.position.z, stopLinePosition);
                 }
  
                 if (Math.random() < 0.45 && !shouldStop) {
