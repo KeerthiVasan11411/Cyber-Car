@@ -489,7 +489,7 @@
         document.addEventListener('dblclick', (event) => {
             event.preventDefault();
         }, { passive: false });
-
+ 
         // --- SYNTHESIZER AUDIO ENGINE & MASTER GAIN ---
         let audioCtx = null;
         let masterGainNode = null;
@@ -937,7 +937,7 @@
                 oldest.mesh.geometry.dispose();
                 oldest.mesh.material.dispose();
             }
-
+ 
             const smokeGeo = new THREE.SphereGeometry(isBoost ? 0.38 : (isHeavyTruck ? 0.3 : 0.18), 10, 10);
             const smokeMat = new THREE.MeshBasicMaterial({
                 color: isBoost ? 0x00f0ff : (isHeavyTruck ? 0x222222 : 0xb8b8b8),
@@ -1403,7 +1403,7 @@
             torso.rotation.x = 0.35;
             riderGroup.add(torso);
  
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), helmetMat);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), helmetMat);
             head.position.set(0, 1.62, -0.15);
             riderGroup.add(head);
  
@@ -1818,14 +1818,14 @@
                 roadSegments.push(seg);
             }
         }
-
+ 
         function addStandaloneTrafficSignals(segmentGroup) {
             segmentGroup.userData.isSignalSection = true;
             segmentGroup.userData.crossingHalfDepth = 5 * 0.65 + 0.42 / 2;
             segmentGroup.userData.npcStopBeforeCrossing = 2;
             createJunctionSignal(segmentGroup, -roadWidth / 2 - 2, 0, 0, 'main');
             createJunctionSignal(segmentGroup, roadWidth / 2 + 2, 0, Math.PI, 'main');
-
+ 
             const zebraMaterial = new THREE.MeshBasicMaterial({ color: 0xf2f4f5 });
             for (let index = -5; index <= 5; index++) {
                 const stripe = new THREE.Mesh(
@@ -1836,7 +1836,7 @@
                 segmentGroup.add(stripe);
             }
         }
-
+ 
         function getSafeSceneryZ(candidateZ, clearance = 32) {
             let safeZ = candidateZ;
             while (junctions.some(junction => Math.abs(safeZ - junction.position.z) < clearance)) {
@@ -1844,7 +1844,7 @@
             }
             return safeZ;
         }
-
+ 
         function isJunctionRoadSlotBlocked(x, z, xRadius, zRadius) {
             return junctions.some(junction => {
                 const junctionZ = junction.position.z;
@@ -1855,10 +1855,10 @@
                 return onMainRoad || onCrossRoad;
             });
         }
-
+ 
         function isScenerySlotBlocked(x, z, xRadius, zRadius, ignoredObject = null) {
             if (isJunctionRoadSlotBlocked(x, z, xRadius, zRadius)) return true;
-
+ 
             const sceneryGroups = [roadBridges, roadTrees, streetLights, sideBuildings, pedestrians];
             return sceneryGroups.some(group => group.some(object => {
                 if (object === ignoredObject) return false;
@@ -1868,7 +1868,7 @@
                     && Math.abs(z - object.position.z) < zRadius + bounds.zRadius;
             }));
         }
-
+ 
         function getSafeSceneryPlacement(x, candidateZ, xRadius, zRadius, ignoredObject = null) {
             let safeZ = getSafeSceneryZ(candidateZ, Math.max(34, zRadius + 4));
             let attempts = 0;
@@ -2137,7 +2137,7 @@
         }
  
         function spawnTraffic() {
-            if (currentSpeed > 0.05 && Math.random() < 0.025) {
+            if (currentSpeed > 0.05 && Math.random() < 0.045) {
                 const randomLane = laneXPositions[Math.floor(Math.random() * laneXPositions.length)];
                 const exists = trafficCars.some(car => car.position.z < -130
                     && Math.abs(car.position.x - randomLane) < 1.5
@@ -2159,7 +2159,7 @@
                         laneX: randomLane,
                         targetX: randomLane,
                         speedBoost: 0,
-                        cruiseSpeed: 0.28 + Math.random() * 0.05,
+                        cruiseSpeed: 0.09 + Math.random() * 0.07,
                         isYielding: false,
                         stoppedForLight: false
                     };
@@ -2176,7 +2176,7 @@
                     const hasCrossingPeople = junctionPedestrians.some(person => person.userData.signalSection === signalSection);
                     const pedestrianCycleUntil = signalSection.userData.pedestrianCycleUntil || 0;
                     if (!signalVisible) return;
-
+ 
                     if (!hasCrossingPeople && gameTime >= pedestrianCycleUntil) {
                         for (let index = 0; index < 3; index++) {
                             const forwardPerson = createPedestrian(-10 - index * 0.55, signalSection.position.z + index * 0.7, 1, true);
@@ -2204,7 +2204,7 @@
                     && playerDistance < 8
                     && Math.abs(playerCar.position.x - person.position.x) < 2.4;
                 if (playerApproachingCrossing) continue;
-
+ 
                 person.position.x += person.userData.walkDirection * delta * 4.2;
                 const step = Math.sin(person.userData.walkPhase) * 0.45;
                 person.userData.walkPhase += delta * 7;
@@ -2291,12 +2291,12 @@
         function isKeyPressed(keyName, codeName) {
             return !!(pressedKeys[keyName] || pressedKeys[codeName]);
         }
-
+ 
         function clearPressedKeys() {
             Object.keys(pressedKeys).forEach(key => delete pressedKeys[key]);
             document.querySelectorAll('.t-btn.pressed').forEach(button => button.classList.remove('pressed'));
         }
-
+ 
         window.addEventListener('blur', clearPressedKeys);
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) clearPressedKeys();
@@ -2398,7 +2398,7 @@
  
         function triggerSmartHornAI() {
             playHornSound();
-
+ 
             if (trafficLightState === 'RED') return;
  
             const isNearJunction = junctions.some(junction =>
@@ -2683,15 +2683,16 @@
             const pressLeft = isKeyPressed('a', 'KeyA') || isKeyPressed('arrowleft', 'ArrowLeft');
             const pressRight = isKeyPressed('d', 'KeyD') || isKeyPressed('arrowright', 'ArrowRight');
  
+            const difficultyScoreThreshold = 4000;
             let targetBaseSpeed = baseSpeed;
-            if (gameTime <= 180) {
-                const remaining = Math.max(0, Math.ceil(180 - gameTime));
-                speedPhaseEl.innerText = isSuperBoostActive ? "🔥 UNLIMITED BOOST ACTIVE 🔥" : `CRUISE MODE (${remaining}s)`;
+            if (score <= difficultyScoreThreshold) {
+                const remainingScore = Math.max(0, Math.ceil(difficultyScoreThreshold - score));
+                speedPhaseEl.innerText = isSuperBoostActive ? "🔥 UNLIMITED BOOST ACTIVE 🔥" : `CRUISE MODE (${remainingScore} PTS)`;
                 speedPhaseEl.style.color = isSuperBoostActive ? "#00ff88" : "#00f0ff";
             } else {
-                const overtime = gameTime - 180;
-                targetBaseSpeed = baseSpeed + (overtime * 0.0015);
-                speedPhaseEl.innerText = isSuperBoostActive ? "🔥 UNLIMITED BOOST ACTIVE 🔥" : `HYPER DRIVE (+${Math.floor(overtime)}s)`;
+                const overScore = score - difficultyScoreThreshold;
+                targetBaseSpeed = Math.min(baseSpeed + (overScore * 0.00006), baseSpeed * 2.2);
+                speedPhaseEl.innerText = isSuperBoostActive ? "🔥 UNLIMITED BOOST ACTIVE 🔥" : `HYPER DRIVE (+${Math.floor(overScore)} PTS)`;
                 speedPhaseEl.style.color = isSuperBoostActive ? "#00ff88" : "#ff0055";
             }
  
@@ -2699,16 +2700,16 @@
             let targetSpeed = targetBaseSpeed;
  
             if (isSuperBoostActive) {
-                targetSpeed = targetBaseSpeed * 2.4;
+                targetSpeed = targetBaseSpeed * 2.75;
                 isBoosting = true;
             } else if (pressUp) {
-                targetSpeed = targetBaseSpeed * 1.7;
+                targetSpeed = targetBaseSpeed * 1.95;
                 isBoosting = true;
             } else if (pressDown) {
                 targetSpeed = 0.0;
                 isBoosting = false;
             }
-
+ 
             if (isBoosting) {
                 exhaustFlamesGroup.visible = true;
                 exhaustFlamesGroup.scale.set(1 + Math.random()*0.2, 1 + Math.random()*0.3, 1 + Math.random()*0.2);
